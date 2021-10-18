@@ -9,9 +9,11 @@ import android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 import androidx.core.view.WindowCompat
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var game:Game
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        game=Game(this)
+        setContentView(game)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -34,7 +36,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             // Tell the Window that our app is going to responsible for fitting for any system windows.
             // This is similar to: view.setSystemUiVisibility(LAYOUT_STABLE | LAYOUT_FULLSCREEN)
-            WindowCompat.setDecorFitsSystemWindows(window, false)
+            window.setDecorFitsSystemWindows(false)
+//            WindowCompat.setDecorFitsSystemWindows(window, false)
             //getWindowInsetsController from our root View, the game:
             val controller = game.windowInsetsController
             // Hide the keyboard (IME = "input method editor")
