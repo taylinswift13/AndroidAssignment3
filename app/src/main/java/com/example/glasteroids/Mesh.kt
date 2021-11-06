@@ -1,5 +1,6 @@
 package com.example.glasteroids
 
+import android.graphics.PointF
 import android.opengl.GLES20
 import java.lang.Math.*
 import java.nio.ByteBuffer
@@ -178,6 +179,26 @@ open class Mesh(geometry: FloatArray, drawMode: Int = GLES20.GL_TRIANGLES) {
         assert(_min._z >= -1.0f && _max._z <= 1.0f,
             { "normalized z[${_min._z} , ${_max._z}] expected z[-1.0, 1.0]" }
         )
+    }
+    open fun getPointList(offsetX: Float, offsetY: Float, facingAngleDegrees: Float): ArrayList<PointF> {
+        val sinTheta = sin(facingAngleDegrees * TO_RADIANS)
+        val cosTheta = cos(facingAngleDegrees * TO_RADIANS)
+        val verts = FloatArray(_vertexCount * COORDS_PER_VERTEX)
+        _vertexBuffer.position(0)
+        _vertexBuffer.get(verts)
+        _vertexBuffer.position(0)
+        val out = ArrayList<PointF>(_vertexCount)
+        var i = 0
+        while (i < _vertexCount * COORDS_PER_VERTEX) {
+            val x = verts[i + X]
+            val y = verts[i + Y]
+            val rotatedX = (x * cosTheta - y * sinTheta) + offsetX
+            val rotatedY = (y * cosTheta + x * sinTheta) + offsetY
+            //final float z = verts[i + Z];
+            out.add(PointF(rotatedX, rotatedY)) //warning! creating new PointFs... use a pool!
+            i += COORDS_PER_VERTEX
+        }
+        return out
     }
 }
 

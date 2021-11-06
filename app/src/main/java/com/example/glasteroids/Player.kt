@@ -1,23 +1,47 @@
 package com.example.glasteroids
 
+
+import android.graphics.PointF
 import android.os.SystemClock
+import android.util.Log
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
 const val TO_RADIANS = PI.toFloat() / 180.0f
-
+const val ROTATION_VELOCITY = 360f //TODO: game play values!
+const val THRUST = 1f
+const val DRAG = 0.99f
 class Player (x: Float, y: Float) : GLEntity() {
     private  val TAG = "Player"
+    private var _bulletCooldown = 0f
+    var health =5
     init {
         _x = x
         _y = y
-        _width = 8f; //TO DO: gameplay values! move to configs
-        _height = 12f;
+        _width = 10f; //TO DO: gameplay values! move to configs
+        _height = 10f;
         _mesh = Triangle.mesh
         //_mesh.setWidthHeight(_width, _height);
         _mesh.flipY();
+        setColors(0.0f,1.0f,1.0f,1.0f)
     }
     override fun update(dt: Float) {
+        _rotation += dt * ROTATION_VELOCITY * engine._inputs._horizontalFactor
 
+        if (engine._inputs._pressingB) {
+            val theta = _rotation * TO_RADIANS
+            _velX += sin(theta) * THRUST
+            _velY -= cos(theta) * THRUST
+        }
+        _velX *= DRAG
+        _velY *= DRAG
+        _bulletCooldown -= dt;
+        if(engine._inputs._pressingA && _bulletCooldown <= 0f){
+            if(engine.maybeFireBullet(this)){
+                _bulletCooldown = TIME_BETWEEN_SHOTS;
+            }
+        }
+        super.update(dt)
     }
     override fun render(viewportMatrix: FloatArray) {
         val uptime = SystemClock.uptimeMillis() //get an (ever-increasing) timestamp to use as a counter
@@ -37,5 +61,19 @@ class Player (x: Float, y: Float) : GLEntity() {
         //ask the super class (GLEntity) to render us
         super.render(viewportMatrix)
     }
+    override fun isColliding(that: GLEntity): Boolean {
+        if (!areBoundingSpheresOverlapping(this, that)) {
+            return false
+        }
+        val shipHull = getPointList()
+        val asteroidHull = that.getPointList()
+        if (polygonVsPolygon(shipHull, asteroidHull)) {
+            return true
+        }
+        return polygonVsPoint(asteroidHull, _x, _y) //finally, check if we're inside the asteroid
+    }
 
+    override fun onCollision(that: GLEntity) {
+        this.setColors(1.0f,0.0f,0.0f,1.0f)
+    }
 }
