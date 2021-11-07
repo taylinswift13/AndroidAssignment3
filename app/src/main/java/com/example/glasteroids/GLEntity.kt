@@ -9,9 +9,9 @@ import com.example.glasteroids.GLManager.draw
 //re-usable singleton TriangleMesh
 object Triangle{
     val mesh = Mesh(floatArrayOf( // in counterclockwise order:
-        0.0f, 1f, 0.0f,  // top
-        -0.5f, -0.5f, 0.0f,  // bottom left
-        0.5f, -0.5f, 0.0f // bottom right
+        -0.5f, 0.5f, 0.0f, // up left
+        0.0f, -1.0f, 0.0f,// bottom
+        0.5f, 0.5f, 0.0f,// up right
     ), GLES20.GL_TRIANGLES)
 }
 //re-usable matrices

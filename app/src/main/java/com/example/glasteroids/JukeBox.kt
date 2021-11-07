@@ -1,73 +1,158 @@
 package com.example.glasteroids
 
-import android.content.res.AssetFileDescriptor
-import android.content.res.AssetManager
 import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaPlayer
 import android.media.SoundPool
 import android.util.Log
 import java.io.IOException
 
-object SFX{
-    var asteroid_crash = 0
-    var start = 0
-    var player_hurt =0
-    var bullet = 0
-    var lose =0
-    var win = 0
+private const val MAX_STREAMS = 6
+
+enum class GameEvent {
+    Asteroid_crash, PlayerHurt, Bullut, GameOver, Win,Start
 }
-const val MAX_STREAMS = 3
-var isFirstInitialize = true
 
-class Jukebox(private val assetManager: AssetManager) {
+private const val SOUNDS_PREF_KEY = "sounds_pref_key"
+private const val MUSIC_PREF_KEY = "music_pref_key"
 
-    private val soundPool: SoundPool
+class Jukebox(val engine: Game) {
+    private val DEFAULT_SFX_VOLUME = 0.7f
+    val TAG = "Jukebox"
+    private var mSoundPool: SoundPool? = null
+    private var mBgPlayer: MediaPlayer? = null
+    private val mSoundsMap = HashMap<GameEvent, Int>()
+    private var mSoundEnabled: Boolean = false
+    private var mMusicEnabled: Boolean = false
+
     init {
+        engine.getActivity().volumeControlStream = AudioManager.STREAM_MUSIC;
+        val prefs = engine.getPreferences()
+        if (prefs != null) {
+            mSoundEnabled = prefs.getBoolean(SOUNDS_PREF_KEY, true)
+        }
+        if (prefs != null) {
+            mMusicEnabled = prefs.getBoolean(MUSIC_PREF_KEY, true)
+        }
+        loadIfNeeded()
+    }
+
+    private fun loadIfNeeded() {
+        if (mSoundEnabled) {
+            loadSounds()
+        }
+        if (mMusicEnabled) {
+            loadMusic()
+        }
+    }
+
+    private fun loadSounds() {
         val attr = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_GAME)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
-        soundPool = SoundPool.Builder()
+        mSoundPool = SoundPool.Builder()
             .setAudioAttributes(attr)
             .setMaxStreams(MAX_STREAMS)
             .build()
 
-        soundPool.setOnLoadCompleteListener { _, _, _ ->
-            if(isFirstInitialize){
-                play(SFX.start)
-                isFirstInitialize = false
-            }
-        }
-        SFX.asteroid_crash = loadSound("asteroid_crash.wav")
-        SFX.player_hurt = loadSound("player_hurt.wav")
-        SFX.start = loadSound("start.wav")
-        SFX.bullet = loadSound("bullet.wav")
-        SFX.lose = loadSound("lose.wav")
-        SFX.win = loadSound("win.wav")
+        mSoundsMap.clear()
+        loadEventSound(GameEvent.Asteroid_crash, "sfx/asteroid_crash.wav")
+        loadEventSound(GameEvent.PlayerHurt, "sfx/player_hurt.wav")
+        loadEventSound(GameEvent.Bullut, "sfx/bullet.wav")
+        loadEventSound(GameEvent.GameOver, "sfx/lose.wav")
+        loadEventSound(GameEvent.Win, "sfx/win.wav")
+        loadEventSound(GameEvent.Start, "sfx/start.wav")
     }
-
-    private fun loadSound(fileName: String): Int{
+    private fun unloadSounds() {
+        if (mSoundPool == null) {
+            return
+        }
+        mSoundPool!!.release()
+        mSoundPool = null
+        mSoundsMap.clear()
+    }
+    private fun loadEventSound(event: GameEvent, fileName: String) {
         try {
-            val descriptor: AssetFileDescriptor = assetManager.openFd(fileName)
-            return soundPool.load(descriptor, 1)
-        }catch(e: IOException){
-            Log.d(TAG, "Unable to load $fileName! Check the filename, and make sure it's in the assets-folder.")
-        }
-        return 0
-    }
-
-    fun play(soundID: Int) {
-        val leftVolume = 1f
-        val rightVolume = 1f
-        val priority = 0
-        val loop = 0
-        val playbackRate = 1.0f
-        if (soundID > 0) {
-            soundPool.play(soundID, leftVolume, rightVolume, priority, loop, playbackRate)
+            val afd = engine.getAssets().openFd(fileName)
+            val soundId = mSoundPool!!.load(afd, 1)
+            mSoundsMap[event] = soundId
+        } catch (e: IOException) {
+            Log.e(TAG, "Error loading sound $e")
         }
     }
-
-    companion object{
-        const val TAG = "Jukebox"
+    fun playEventSound(event: GameEvent) {
+        if (!mSoundEnabled) {
+            return
+        }
+        val leftVolume = DEFAULT_SFX_VOLUME
+        val rightVolume = DEFAULT_SFX_VOLUME
+        val priority = 1
+        val loop = 0 //-1 loop forever, 0 play once
+        val rate = 1.0f
+        val soundID = mSoundsMap[event]
+        if(soundID == null){
+            Log.e(TAG, "Attempting to play non-existent event sound: {event}")
+            return
+        }
+        if (soundID > 0) { //if soundID is 0, the file failed to load. Make sure you catch this in the loading routine.
+            mSoundPool!!.play(soundID, leftVolume, rightVolume, priority, loop, rate)
+        }
     }
+    private fun loadMusic() {
+        try {
+            mBgPlayer = MediaPlayer()
+            val afd = engine.getAssets().openFd("bgm/bgm.mp3")
+            mBgPlayer!!.setDataSource(
+                afd.fileDescriptor,
+                afd.startOffset,
+                afd.length
+            )
+            mBgPlayer!!.isLooping = true
+            mBgPlayer!!.setVolume(DEFAULT_SFX_VOLUME,DEFAULT_SFX_VOLUME)
+            mBgPlayer!!.prepare()
+        } catch (e: IOException) {
+            Log.e(TAG, "Unable to create MediaPlayer.", e)
+        }
+    }
+    private fun unloadMusic() {
+        if (mBgPlayer == null) {
+            return
+        }
+        mBgPlayer!!.stop()
+        mBgPlayer!!.release()
+    }
+    fun pauseBgMusic() {
+        if (!mMusicEnabled) {
+            return
+        }
+        mBgPlayer!!.pause()
+    }
+
+    fun resumeBgMusic() {
+        if (!mMusicEnabled) {
+            return
+        }
+        mBgPlayer!!.start()
+    }
+    fun toggleSoundStatus() {
+        mSoundEnabled = !mSoundEnabled
+        if (mSoundEnabled) {
+            loadSounds()
+        } else {
+            unloadSounds()
+        }
+        engine.savePreference(SOUNDS_PREF_KEY, mSoundEnabled)
+    }
+    fun toggleMusicStatus() {
+        mMusicEnabled = !mMusicEnabled
+        if (mMusicEnabled) {
+            loadMusic()
+        } else {
+            unloadMusic()
+        }
+        engine.savePreference(MUSIC_PREF_KEY, mSoundEnabled)
+    }
+
 
 }

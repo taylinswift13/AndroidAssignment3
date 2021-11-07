@@ -13,16 +13,14 @@ import androidx.core.view.WindowCompat
 
 class MainActivity : AppCompatActivity() {
     private lateinit var game:Game
-    private var mediaPlayer = MediaPlayer()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //game=Game(this)
+        game=Game(this)
         //setContentView(game)
         setContentView(R.layout.activity_main)
         val controls = TouchController(findViewById(R.id.gamepad))
         game = findViewById<Game>(R.id.game)
         game.setControls(controls)
-
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -30,21 +28,15 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) hideSystemUI()
     }
 
-    fun PlayBGM(){
-        mediaPlayer= MediaPlayer.create(this, R.raw.bgm);
-        mediaPlayer.setLooping(true);
-        mediaPlayer.setVolume(0.5f,0.5f)
-        mediaPlayer.start()
+
+    override fun onPause() {
+        game.pause()
+        super.onPause()
     }
 
     override fun onResume() {
-        PlayBGM()
         super.onResume()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        mediaPlayer.release()
+        game.resume()
     }
 
     private fun hideSystemUI() {

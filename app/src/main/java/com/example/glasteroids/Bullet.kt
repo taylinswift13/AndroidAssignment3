@@ -6,11 +6,13 @@ import kotlin.math.sin
 
 private val BULLET_MESH = Dot.mesh //reusing the Dot (defined in Star.kt, but available throughout the package)
 const val SPEED = 60f //TO DO: game play settings
-const val TIME_TO_LIVE = 3f //seconds
+const val TIME_TO_LIVE = 1f //seconds
 
 class Bullet : GLEntity() {
     var _ttl = TIME_TO_LIVE
     init {
+        _x=-10f
+        _y=-10f
         setColors(1f, 0f, 1f, 1f)
         _mesh = BULLET_MESH //all bullets use the exact same mesh
     }
@@ -29,7 +31,7 @@ class Bullet : GLEntity() {
     val isAlive: Boolean
         get() = _ttl > 0
     override fun isDead(): Boolean {
-        return _ttl < 1
+        return _ttl < 0
     }
 
     override fun update(dt: Float) {

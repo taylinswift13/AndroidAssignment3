@@ -8,7 +8,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 const val TO_RADIANS = PI.toFloat() / 180.0f
-const val ROTATION_VELOCITY = 360f //TODO: game play values!
+const val ROTATION_VELOCITY = 250f //TODO: game play values!
 const val THRUST = 1f
 const val DRAG = 0.99f
 class Player (x: Float, y: Float) : GLEntity() {
@@ -18,12 +18,12 @@ class Player (x: Float, y: Float) : GLEntity() {
     init {
         _x = x
         _y = y
-        _width = 10f; //TO DO: gameplay values! move to configs
-        _height = 10f;
+        _width = 20f; //TO DO: gameplay values! move to configs
+        _height = 20f;
         _mesh = Triangle.mesh
         //_mesh.setWidthHeight(_width, _height);
         _mesh.flipY();
-        setColors(0.0f,1.0f,1.0f,1.0f)
+        setColors(0.0f,1.0f,0.0f,1.0f)
     }
     override fun update(dt: Float) {
         _rotation += dt * ROTATION_VELOCITY * engine._inputs._horizontalFactor
